@@ -112,6 +112,12 @@ def main():
 
 	score = 0
 
+	# player health / respawn
+	player_max_health = 100
+	player_health = player_max_health
+	# invulnerability timer after respawn (ms)
+	player_invuln_ms = 0
+
 	running = True
 	while running:
 		dt = clock.tick(60)
@@ -222,11 +228,16 @@ def main():
 			if eb.top > HEIGHT:
 				enemy_bullets.remove(eb)
 
-		# enemy bullets hit player
+		# countdown invulnerability
+		if player_invuln_ms > 0:
+			player_invuln_ms = max(0, player_invuln_ms - dt)
+
+		# enemy bullets hit player (respect invulnerability)
 		for eb in enemy_bullets[:]:
-			if player.colliderect(eb):
+			if player_invuln_ms <= 0 and player.colliderect(eb):
+				# damage player instead of instant death
+				player_health -= 25
 				try:
-					# play hit/explosion sound and shake camera
 					sound.sound.play('explosion')
 				except Exception:
 					pass
@@ -235,14 +246,20 @@ def main():
 						camera.shake(6)
 				except Exception:
 					pass
-				# remove bullet and end game for now
+				# remove bullet
 				try:
 					enemy_bullets.remove(eb)
 				except ValueError:
 					pass
-				# simple player death
-				running = False
-				break
+				# if still alive, respawn player with temporary invulnerability
+				if player_health > 0:
+					player.x = WIDTH // 2 - player.width // 2
+					player.y = HEIGHT - 60
+					player_invuln_ms = 1500
+				else:
+					# dead: end game
+					running = False
+					break
 
 		# spawn enemies (faster as score increases)
 		enemy_spawn += 1
@@ -378,6 +395,26 @@ def main():
 		audiotxt = font.render(aud, True, (200, 200, 120))
 		screen.blit(txt, (10, 10))
 		screen.blit(audiotxt, (10, 36))
+
+		# draw health bar
+		health_w = 140
+		health_h = 12
+		health_x = 10
+		health_y = 64
+		# background
+		pygame.draw.rect(screen, (60, 60, 60), (health_x, health_y, health_w, health_h))
+		# fill
+		health_frac = max(0.0, min(1.0, player_health / player_max_health))
+		pygame.draw.rect(screen, (180, 40, 40), (health_x, health_y, int(health_w * health_frac), health_h))
+		# health text
+		health_txt = font.render(f'Health: {int(player_health)}/{player_max_health}', True, (230,230,230))
+		screen.blit(health_txt, (health_x + health_w + 8, health_y - 2))
+
+		# show active power-up timers (rapid-fire)
+		if player_rapid_timer_ms > 0:
+			secs = max(0, int(player_rapid_timer_ms / 1000))
+			rtxt = font.render(f'RAPID: {secs}s', True, (200,200,100))
+			screen.blit(rtxt, (10, 86))
 
 		pygame.display.flip()
 
