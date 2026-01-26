@@ -8,6 +8,19 @@ proj_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if proj_root not in sys.path:
 	sys.path.insert(0, proj_root)
 
+# attempt to load optional `pause.py` from the user's home directory without
+# modifying sys.path (keeps project `sound` import stable)
+pause_mod = None
+import importlib.util
+pause_path = os.path.join(os.path.expanduser('~'), 'pause.py')
+if os.path.exists(pause_path):
+	try:
+		spec = importlib.util.spec_from_file_location("user_pause", pause_path)
+		pause_mod = importlib.util.module_from_spec(spec)
+		spec.loader.exec_module(pause_mod)
+	except Exception:
+		pause_mod = None
+
 try:
 	import pygame
 	from pygame.locals import *
@@ -93,6 +106,15 @@ def main():
 	while running:
 		dt = clock.tick(60)
 		for ev in pygame.event.get():
+			# give external pause handler first chance to intercept (P key)
+			try:
+				if pause_mod is not None:
+					try:
+						pause_mod.handle_event(ev, screen)
+					except Exception:
+						pass
+			except Exception:
+				pass
 			if ev.type == QUIT:
 				running = False
 			elif ev.type == KEYDOWN:
