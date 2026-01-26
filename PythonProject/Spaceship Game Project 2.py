@@ -37,6 +37,12 @@ def main():
 	font = pygame.font.Font(None, 28)
 	clock = pygame.time.Clock()
 
+	# start background music
+	try:
+		sound.sound.play_music(loop=True)
+	except Exception:
+		pass
+
 	# player
 	player = pygame.Rect(WIDTH // 2 - 20, HEIGHT - 60, 40, 40)
 	speed = 6
@@ -78,6 +84,31 @@ def main():
 					try:
 						curr = getattr(sound.sound, 'volume', 1.0)
 						sound.sound.set_volume(max(0.0, curr - 0.1))
+					except Exception:
+						pass
+				elif ev.key == K_b:
+					# toggle music on/off
+					try:
+						# if music playing, stop; else start
+						import pygame as _pg
+						if _pg.mixer.get_init() and _pg.mixer.music.get_busy():
+							sound.sound.stop_music()
+						else:
+							sound.sound.play_music(loop=True)
+					except Exception:
+						pass
+				elif ev.key == K_RIGHTBRACKET:
+					# increase music volume
+					try:
+						mv = PER_SOUND_VOLUME.get('music', 0.7)
+						sound.sound.set_music_volume(min(1.0, mv + 0.05))
+					except Exception:
+						pass
+				elif ev.key == K_LEFTBRACKET:
+					# decrease music volume
+					try:
+						mv = PER_SOUND_VOLUME.get('music', 0.7)
+						sound.sound.set_music_volume(max(0.0, mv - 0.05))
 					except Exception:
 						pass
 

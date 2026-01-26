@@ -13,6 +13,16 @@ except Exception:
         class _Dummy:
             def play(self, *a, **k):
                 return None
+            def set_volume(self, v):
+                return None
+            def toggle_mute(self):
+                return None
+            def play_music(self, loop=True):
+                return None
+            def stop_music(self):
+                return None
+            def set_music_volume(self, v):
+                return None
 
         _sound_impl = _Dummy()
 

@@ -1,3 +1,0 @@
-This is a placeholder. Put your shoot.wav file here: assets/shoot.wav
-
-You can obtain or record a short WAV file named 'shoot.wav' and place it in this folder so `sound.play('shoot')` will play it.
