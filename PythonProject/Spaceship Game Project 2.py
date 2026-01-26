@@ -60,6 +60,26 @@ def main():
 			elif ev.type == KEYDOWN:
 				if ev.key == K_ESCAPE:
 					running = False
+				elif ev.key == K_m:
+					# toggle mute
+					try:
+						sound.sound.toggle_mute()
+					except Exception:
+						pass
+				elif ev.key == K_PLUS or ev.key == K_EQUALS:
+					# increase volume
+					try:
+						curr = getattr(sound.sound, 'volume', 1.0)
+						sound.sound.set_volume(min(1.0, curr + 0.1))
+					except Exception:
+						pass
+				elif ev.key == K_MINUS:
+					# decrease volume
+					try:
+						curr = getattr(sound.sound, 'volume', 1.0)
+						sound.sound.set_volume(max(0.0, curr - 0.1))
+					except Exception:
+						pass
 
 		keys = pygame.key.get_pressed()
 		if keys[K_LEFT] or keys[K_a]:
@@ -157,8 +177,13 @@ def main():
 			pygame.draw.rect(screen, (240, 100, 120), e)
 
 		hud = f'Score: {score}  (ESC to quit)'
+		vol = getattr(sound.sound, 'volume', 1.0)
+		muted = getattr(sound.sound, 'muted', False)
+		aud = f"Volume: {int(vol*100)}% {'MUTED' if muted else ''}"
 		txt = font.render(hud, True, (230, 230, 230))
+		audiotxt = font.render(aud, True, (200, 200, 120))
 		screen.blit(txt, (10, 10))
+		screen.blit(audiotxt, (10, 36))
 
 		pygame.display.flip()
 
