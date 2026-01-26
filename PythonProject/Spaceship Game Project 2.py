@@ -8,18 +8,20 @@ proj_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if proj_root not in sys.path:
 	sys.path.insert(0, proj_root)
 
-# attempt to load optional `pause.py` from the user's home directory without
-# modifying sys.path (keeps project `sound` import stable)
+# prefer the repo `pause` module, fall back to a home-directory copy if present
 pause_mod = None
-import importlib.util
-pause_path = os.path.join(os.path.expanduser('~'), 'pause.py')
-if os.path.exists(pause_path):
-	try:
-		spec = importlib.util.spec_from_file_location("user_pause", pause_path)
-		pause_mod = importlib.util.module_from_spec(spec)
-		spec.loader.exec_module(pause_mod)
-	except Exception:
-		pause_mod = None
+try:
+	import pause as pause_mod
+except Exception:
+	import importlib.util
+	pause_path = os.path.join(os.path.expanduser('~'), 'pause.py')
+	if os.path.exists(pause_path):
+		try:
+			spec = importlib.util.spec_from_file_location("user_pause", pause_path)
+			pause_mod = importlib.util.module_from_spec(spec)
+			spec.loader.exec_module(pause_mod)
+		except Exception:
+			pause_mod = None
 
 try:
 	import pygame
