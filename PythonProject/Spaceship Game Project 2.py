@@ -88,9 +88,13 @@ def main():
 	except Exception:
 		player_img = enemy_img = bullet_img = None
 
-	# player
+	# player (use float position + inertia for smoother movement)
 	player = pygame.Rect(WIDTH // 2 - 20, HEIGHT - 60, 40, 40)
-	speed = 6
+	player_x = float(player.x)
+	player_vx = 0.0
+	accel = 0.8
+	max_speed = 8.0
+	friction = 0.75
 
 	# shooting state (frames) and rapid-fire timer (ms)
 	bullets = []  # list of rects
@@ -121,6 +125,36 @@ def main():
 	running = True
 	while running:
 		dt = clock.tick(60)
+
+		def show_revive_menu():
+			# simple blocking menu shown when player dies or game over
+			menu_font = pygame.font.Font(None, 36)
+			small = pygame.font.Font(None, 24)
+			while True:
+				dt_menu = clock.tick(30)
+				for me in pygame.event.get():
+					if me.type == QUIT:
+						return 'quit'
+					if me.type == KEYDOWN:
+						if me.key == K_c:
+							return 'continue'
+						if me.key == K_r:
+							return 'restart'
+						if me.key == K_q or me.key == K_ESCAPE:
+							return 'quit'
+
+				screen.fill((10,10,20))
+				title = menu_font.render('GAME OVER', True, (240,200,200))
+				score_txt = small.render(f'Score: {score}', True, (200,200,200))
+				cont = small.render('Press C to Continue (revive)', True, (200,200,100))
+				rest = small.render('Press R to Restart', True, (200,200,100))
+				quit_txt = small.render('Press Q or ESC to Quit', True, (200,200,100))
+				screen.blit(title, (WIDTH//2 - title.get_width()//2, HEIGHT//2 - 80))
+				screen.blit(score_txt, (WIDTH//2 - score_txt.get_width()//2, HEIGHT//2 - 30))
+				screen.blit(cont, (WIDTH//2 - cont.get_width()//2, HEIGHT//2 + 10))
+				screen.blit(rest, (WIDTH//2 - rest.get_width()//2, HEIGHT//2 + 40))
+				screen.blit(quit_txt, (WIDTH//2 - quit_txt.get_width()//2, HEIGHT//2 + 70))
+				pygame.display.flip()
 		for ev in pygame.event.get():
 			# give external pause handler first chance to intercept (P key)
 			try:
@@ -177,25 +211,68 @@ def main():
 				elif ev.key == K_RIGHTBRACKET:
 					# increase music volume
 					try:
-						mv = PER_SOUND_VOLUME.get('music', 0.7)
+						mv = None
+						# try common attributes / getters on the sound backend
+						try:
+							mv = getattr(sound.sound, 'music_volume', None)
+						except Exception:
+							mv = None
+						if mv is None:
+							get_mv = getattr(sound.sound, 'get_music_volume', None)
+							if callable(get_mv):
+								try:
+									mv = get_mv()
+								except Exception:
+									mv = 0.7
+						if mv is None:
+							mv = 0.7
 						sound.sound.set_music_volume(min(1.0, mv + 0.05))
 					except Exception:
 						pass
 				elif ev.key == K_LEFTBRACKET:
 					# decrease music volume
 					try:
-						mv = PER_SOUND_VOLUME.get('music', 0.7)
+						mv = None
+						# try common attributes / getters on the sound backend
+						try:
+							mv = getattr(sound.sound, 'music_volume', None)
+						except Exception:
+							mv = None
+						if mv is None:
+							get_mv = getattr(sound.sound, 'get_music_volume', None)
+							if callable(get_mv):
+								try:
+									mv = get_mv()
+								except Exception:
+									mv = 0.7
+						if mv is None:
+							mv = 0.7
 						sound.sound.set_music_volume(max(0.0, mv - 0.05))
 					except Exception:
 						pass
 
 		keys = pygame.key.get_pressed()
+		# apply horizontal acceleration
 		if keys[K_LEFT] or keys[K_a]:
-			player.x -= speed
-		if keys[K_RIGHT] or keys[K_d]:
-			player.x += speed
+			player_vx -= accel
+		elif keys[K_RIGHT] or keys[K_d]:
+			player_vx += accel
+		else:
+			# apply friction
+			player_vx *= friction
 
+		# clamp velocity
+		if player_vx > max_speed:
+			player_vx = max_speed
+		if player_vx < -max_speed:
+			player_vx = -max_speed
+
+		# update float position and rect
+		player_x += player_vx
+		player.x = int(round(player_x))
 		player.x = max(0, min(WIDTH - player.width, player.x))
+		# keep float position in sync after clamping
+		player_x = float(player.x)
 
 		# shooting
 		if keys[K_SPACE] and shoot_cooldown <= 0:
@@ -257,9 +334,25 @@ def main():
 					player.y = HEIGHT - 60
 					player_invuln_ms = 1500
 				else:
-					# dead: end game
-					running = False
-					break
+					# dead: show revive/continue menu
+					choice = show_revive_menu()
+					if choice == 'continue':
+						player_health = max(1, player_max_health // 2)
+						player.x = WIDTH // 2 - player.width // 2
+						player.y = HEIGHT - 60
+						player_invuln_ms = 2000
+						# continue the game loop
+						pass
+					elif choice == 'restart':
+						try:
+							if restart is not None:
+								restart.restart_game()
+						except Exception:
+							running = False
+							break
+					else:
+						running = False
+						break
 
 		# spawn enemies (faster as score increases)
 		enemy_spawn += 1
@@ -284,7 +377,25 @@ def main():
 			except Exception:
 				pass
 			if e.top > HEIGHT:
-				running = False
+				# enemy passed bottom — treat as game over and show revive menu
+				choice = show_revive_menu()
+				if choice == 'continue':
+					# respawn player with half health
+					player_health = max(1, player_max_health // 2)
+					player.x = WIDTH // 2 - player.width // 2
+					player.y = HEIGHT - 60
+					player_invuln_ms = 2000
+					break
+				elif choice == 'restart':
+					try:
+						if restart is not None:
+							restart.restart_game()
+					except Exception:
+						running = False
+					break
+				else:
+					running = False
+					break
 			# collisions
 			for b in bullets[:]:
 				if e.colliderect(b):
