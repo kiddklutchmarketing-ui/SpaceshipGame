@@ -42,6 +42,19 @@ def main():
 		sound.sound.play_music(loop=True)
 	except Exception:
 		pass
+	# load sprites if available
+	player_img = None
+	enemy_img = None
+	bullet_img = None
+	try:
+		if os.path.exists(os.path.join('assets', 'player.bmp')):
+			player_img = pygame.image.load(os.path.join('assets', 'player.bmp')).convert_alpha()
+		if os.path.exists(os.path.join('assets', 'enemy.bmp')):
+			enemy_img = pygame.image.load(os.path.join('assets', 'enemy.bmp')).convert_alpha()
+		if os.path.exists(os.path.join('assets', 'bullet.bmp')):
+			bullet_img = pygame.image.load(os.path.join('assets', 'bullet.bmp')).convert_alpha()
+	except Exception:
+		player_img = enemy_img = bullet_img = None
 
 	# player
 	player = pygame.Rect(WIDTH // 2 - 20, HEIGHT - 60, 40, 40)
@@ -199,13 +212,22 @@ def main():
 			except Exception:
 				pass
 		# player
-		pygame.draw.rect(screen, (100, 200, 250), player)
+		if player_img:
+			screen.blit(player_img, player)
+		else:
+			pygame.draw.rect(screen, (100, 200, 250), player)
 		# bullets
 		for b in bullets:
-			pygame.draw.rect(screen, (255, 220, 120), b)
+			if bullet_img:
+				screen.blit(bullet_img, b)
+			else:
+				pygame.draw.rect(screen, (255, 220, 120), b)
 		# enemies
 		for e in enemies:
-			pygame.draw.rect(screen, (240, 100, 120), e)
+			if enemy_img:
+				screen.blit(enemy_img, e)
+			else:
+				pygame.draw.rect(screen, (240, 100, 120), e)
 
 		hud = f'Score: {score}  (ESC to quit)'
 		vol = getattr(sound.sound, 'volume', 1.0)
