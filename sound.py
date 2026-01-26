@@ -29,3 +29,49 @@ except Exception:
 sound = _sound_impl
 
 __all__ = ['sound']
+
+# Module-level convenience functions so callers can use `sound.play(name)`
+def play(name):
+    try:
+        return _sound_impl.play(name)
+    except Exception:
+        try:
+            return _sound_impl.sound.play(name)
+        except Exception:
+            return None
+
+def set_volume(v):
+    try:
+        return _sound_impl.set_volume(v)
+    except Exception:
+        try:
+            return _sound_impl.sound.set_volume(v)
+        except Exception:
+            return None
+
+def toggle_mute():
+    try:
+        return _sound_impl.toggle_mute()
+    except Exception:
+        try:
+            return _sound_impl.sound.toggle_mute()
+        except Exception:
+            return None
+
+def play_music(loop=True):
+    try:
+        return _sound_impl.play_music(loop=loop)
+    except Exception:
+        try:
+            return _sound_impl.sound.play_music(loop=loop)
+        except Exception:
+            return None
+
+def stop_music():
+    try:
+        return _sound_impl.stop_music()
+    except Exception:
+        try:
+            return _sound_impl.sound.stop_music()
+        except Exception:
+            return None
