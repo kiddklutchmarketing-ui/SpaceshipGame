@@ -10,5 +10,18 @@ def restart_game():
         pygame.quit()
     except Exception:
         pass
-    import os, sys
-    os.execl(sys.executable, sys.executable, *sys.argv)
+    import subprocess, sys, os
+    try:
+        # Use Popen to avoid shell/quoting issues on Windows when paths contain spaces.
+        subprocess.Popen([sys.executable] + sys.argv)
+    except Exception:
+        # Fallback to exec if Popen fails
+        try:
+            os.execl(sys.executable, sys.executable, *sys.argv)
+        except Exception:
+            pass
+    # Ensure current process exits
+    try:
+        os._exit(0)
+    except Exception:
+        pass
