@@ -15,6 +15,11 @@ except Exception:
 	pygame = None
 
 import sound
+try:
+	from enemy_bullet import try_fire
+except Exception:
+	def try_fire(*args, **kwargs):
+		return None
 
 
 WIDTH, HEIGHT = 640, 480
@@ -67,6 +72,8 @@ def main():
 	# shooting state (frames) and rapid-fire timer (ms)
 	bullets = []  # list of rects
 	bullet_speed = -10
+	# enemy-fired bullets (separate list so they travel downward)
+	enemy_bullets = []
 	# cooldown measured in frames at 60FPS; base ~14 frames (~233ms)
 	player_base_fire_cooldown_frames = 14
 	player_fire_cooldown_frames = player_base_fire_cooldown_frames
@@ -164,11 +171,17 @@ def main():
 			if player_rapid_timer_ms == 0:
 				player_fire_cooldown_frames = player_base_fire_cooldown_frames
 
-		# update bullets
+		# update player bullets
 		for b in bullets[:]:
 			b.y += bullet_speed
 			if b.bottom < 0:
 				bullets.remove(b)
+
+		# update enemy bullets (move downward)
+		for eb in enemy_bullets[:]:
+			eb.y += 6
+			if eb.top > HEIGHT:
+				enemy_bullets.remove(eb)
 
 		# spawn enemies (faster as score increases)
 		enemy_spawn += 1
@@ -181,6 +194,17 @@ def main():
 		# update enemies
 		for e in enemies[:]:
 			e.y += 2 + score * 0.02
+			# enemies have a small chance to fire a bullet
+			try:
+				eb_obj = try_fire(e)
+				if eb_obj is not None:
+					# keep simple compatibility: append the bullet's rect to enemy_bullets
+					try:
+						enemy_bullets.append(eb_obj.rect)
+					except Exception:
+						pass
+			except Exception:
+				pass
 			if e.top > HEIGHT:
 				running = False
 			# collisions
