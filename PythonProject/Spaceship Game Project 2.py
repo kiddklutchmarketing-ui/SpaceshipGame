@@ -47,12 +47,16 @@ def main():
 	enemy_img = None
 	bullet_img = None
 	try:
-		if os.path.exists(os.path.join('assets', 'player.bmp')):
-			player_img = pygame.image.load(os.path.join('assets', 'player.bmp')).convert_alpha()
-		if os.path.exists(os.path.join('assets', 'enemy.bmp')):
-			enemy_img = pygame.image.load(os.path.join('assets', 'enemy.bmp')).convert_alpha()
-		if os.path.exists(os.path.join('assets', 'bullet.bmp')):
-			bullet_img = pygame.image.load(os.path.join('assets', 'bullet.bmp')).convert_alpha()
+		# prefer PNGs, fall back to BMP
+		ppath = os.path.join('assets', 'player.png') if os.path.exists(os.path.join('assets', 'player.png')) else os.path.join('assets', 'player.bmp')
+		epath = os.path.join('assets', 'enemy.png') if os.path.exists(os.path.join('assets', 'enemy.png')) else os.path.join('assets', 'enemy.bmp')
+		bpath = os.path.join('assets', 'bullet.png') if os.path.exists(os.path.join('assets', 'bullet.png')) else os.path.join('assets', 'bullet.bmp')
+		if os.path.exists(ppath):
+			player_img = pygame.image.load(ppath).convert_alpha()
+		if os.path.exists(epath):
+			enemy_img = pygame.image.load(epath).convert_alpha()
+		if os.path.exists(bpath):
+			bullet_img = pygame.image.load(bpath).convert_alpha()
 	except Exception:
 		player_img = enemy_img = bullet_img = None
 
