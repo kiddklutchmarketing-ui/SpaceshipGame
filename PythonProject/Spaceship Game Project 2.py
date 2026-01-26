@@ -31,6 +31,14 @@ except Exception:
 
 import sound
 try:
+	import camera
+except Exception:
+	camera = None
+try:
+	import restart
+except Exception:
+	restart = None
+try:
 	from enemy_bullet import try_fire
 except Exception:
 	def try_fire(*args, **kwargs):
@@ -122,6 +130,13 @@ def main():
 			elif ev.type == KEYDOWN:
 				if ev.key == K_ESCAPE:
 					running = False
+				elif ev.key == K_r:
+					# restart the game if restart helper is available
+					try:
+						if restart is not None:
+							restart.restart_game()
+					except Exception:
+						pass
 				elif ev.key == K_m:
 					# toggle mute
 					try:
@@ -206,6 +221,28 @@ def main():
 			eb.y += 6
 			if eb.top > HEIGHT:
 				enemy_bullets.remove(eb)
+
+		# enemy bullets hit player
+		for eb in enemy_bullets[:]:
+			if player.colliderect(eb):
+				try:
+					# play hit/explosion sound and shake camera
+					sound.sound.play('explosion')
+				except Exception:
+					pass
+				try:
+					if camera is not None:
+						camera.shake(6)
+				except Exception:
+					pass
+				# remove bullet and end game for now
+				try:
+					enemy_bullets.remove(eb)
+				except ValueError:
+					pass
+				# simple player death
+				running = False
+				break
 
 		# spawn enemies (faster as score increases)
 		enemy_spawn += 1
@@ -299,6 +336,13 @@ def main():
 				screen.blit(enemy_img, e)
 			else:
 				pygame.draw.rect(screen, (240, 100, 120), e)
+
+		# draw enemy bullets
+		for eb in enemy_bullets:
+			try:
+				pygame.draw.rect(screen, (255, 60, 60), eb)
+			except Exception:
+				pass
 
 		# power-ups
 		for p in powerups[:]:
