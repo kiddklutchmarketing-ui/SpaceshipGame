@@ -64,9 +64,17 @@ def main():
 	player = pygame.Rect(WIDTH // 2 - 20, HEIGHT - 60, 40, 40)
 	speed = 6
 
+	# shooting state (frames) and rapid-fire timer (ms)
 	bullets = []  # list of rects
 	bullet_speed = -10
+	# cooldown measured in frames at 60FPS; base ~14 frames (~233ms)
+	player_base_fire_cooldown_frames = 14
+	player_fire_cooldown_frames = player_base_fire_cooldown_frames
 	shoot_cooldown = 0
+	# rapid-fire timer in milliseconds (counts down using dt)
+	player_rapid_timer_ms = 0
+	# power-ups
+	powerups = []
 
 	enemies = []
 	enemy_spawn = 0
@@ -141,7 +149,7 @@ def main():
 		if keys[K_SPACE] and shoot_cooldown <= 0:
 			b = pygame.Rect(player.centerx - 3, player.top - 8, 6, 10)
 			bullets.append(b)
-			shoot_cooldown = 14
+			shoot_cooldown = player_fire_cooldown_frames
 			try:
 				sound.sound.play('shoot')
 			except Exception:
@@ -149,6 +157,12 @@ def main():
 
 		if shoot_cooldown > 0:
 			shoot_cooldown -= 1
+
+		# handle rapid-fire timer on player (restore cooldown when expired)
+		if player_rapid_timer_ms > 0:
+			player_rapid_timer_ms = max(0, player_rapid_timer_ms - dt)
+			if player_rapid_timer_ms == 0:
+				player_fire_cooldown_frames = player_base_fire_cooldown_frames
 
 		# update bullets
 		for b in bullets[:]:
@@ -192,6 +206,11 @@ def main():
 						vy = speedp * random.uniform(-1, 1)
 						particles.append({'x': px, 'y': py, 'vx': vx, 'vy': vy, 'life': random.uniform(0.5, 1.0)})
 					score += 1
+					# small chance to drop a power-up on enemy death
+					if random.random() < 0.12:
+						ptype = random.choice(['health', 'rapid'])
+						pr = pygame.Rect(e.centerx - 8, e.centery - 8, 16, 16)
+						powerups.append({'rect': pr, 'type': ptype})
 					break
 
 		# draw - starfield background
@@ -232,6 +251,32 @@ def main():
 				screen.blit(enemy_img, e)
 			else:
 				pygame.draw.rect(screen, (240, 100, 120), e)
+
+		# power-ups
+		for p in powerups[:]:
+			pr = p['rect']
+			if p['type'] == 'rapid':
+				pygame.draw.rect(screen, (255, 160, 0), pr)
+			elif p['type'] == 'health':
+				pygame.draw.rect(screen, (0, 200, 0), pr)
+			else:
+				pygame.draw.rect(screen, (180, 180, 180), pr)
+
+		# check player <-> powerup collisions
+		for p in powerups[:]:
+			if player.colliderect(p['rect']):
+				if p['type'] == 'health':
+					# heal (no-op for simple demo)
+					pass
+				elif p['type'] == 'rapid':
+					# enable rapid-fire for 5 seconds
+					player_rapid_timer_ms = 5000
+					player_fire_cooldown_frames = max(1, int(100 * 60 / 1000))
+				# remove powerup
+				try:
+					powerups.remove(p)
+				except ValueError:
+					pass
 
 		hud = f'Score: {score}  (ESC to quit)'
 		vol = getattr(sound.sound, 'volume', 1.0)
