@@ -1,0 +1,60 @@
+name: Build EXE & Installer
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-installer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Create venv and install deps
+        shell: powershell
+        run: |
+          python -m venv .venv
+          . .venv\Scripts\Activate.ps1
+          python -m pip install -U pip setuptools wheel
+          python -m pip install -r requirements.txt
+          python -m pip install pyinstaller
+
+      - name: Build EXE with PyInstaller
+        shell: powershell
+        run: |
+          . .venv\Scripts\Activate.ps1
+          python -m PyInstaller --noconfirm --onefile --name SpaceshipGame --add-data "assets;assets" "PythonProject/Spaceship Game Project 2.py"
+
+      - name: Create dist zip
+        shell: powershell
+        run: |
+          Compress-Archive -Path .\dist\* -DestinationPath .\dist\SpaceshipGame-dist.zip -Force
+
+      - name: Install NSIS (choco)
+        shell: powershell
+        run: |
+          choco install nsis -y
+
+      - name: Build NSIS installer
+        shell: powershell
+        run: |
+          # Ensure installer script path is correct
+          if (!(Test-Path installer\SpaceshipGameInstaller.nsi)) { Write-Error 'NSIS script not found'; exit 2 }
+          makensis installer\SpaceshipGameInstaller.nsi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: spaceship-artifacts
+          path: |
+            dist\SpaceshipGame.exe
+            dist\SpaceshipGame-dist.zip
+            SpaceshipGameInstaller.exe
